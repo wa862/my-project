@@ -22,7 +22,6 @@
 </template>
 
 <script setup lang="ts">
-// 不需要导入箭头图标了
 </script>
 
 <style scoped>

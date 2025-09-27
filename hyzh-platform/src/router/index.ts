@@ -14,6 +14,7 @@ import EducationResourcePageVue from '@/pages/EducationResourcePage.vue'
 import ThinkTankPageVue from '@/pages/ThinkTankPage.vue'
 import ResearchSupportPageVue from '@/pages/ResearchSupportPage.vue'
 import AboutPage from '@/pages/AboutPage.vue'
+import SmartQAPage from '@/pages/SmartQAPage.vue'
 const routes = [
   { path: '/', name: 'home', component: HomePage },
   { path: '/login', name: 'login', component: LoginForm },
@@ -34,6 +35,7 @@ const routes = [
   {path: '/education-resource', name: 'education-resource', component: EducationResourcePageVue},
   {path:'/dashboard2', name: 'dashboard2', component: ResearchSupportPageVue},
   {path:'/data-service/extension1', name: 'data-service-extension1', component: ThinkTankPageVue},
+  {path:'/smart-qa', name: 'smart-qa', component: SmartQAPage},
   {path:'/about', name: 'about', component: AboutPage},
 ]
 

@@ -127,12 +127,12 @@ onMounted(() => {
     .then((chinaJson) => {
       echarts.registerMap('china', chinaJson)
       myMap.setOption({
-        title: { text: '京津冀教育分布图', left: 'center', textStyle: { color: '#fff' } },
+        title: { text: '京津冀教育分布图', left: 'center', textStyle: { color: 'white' } },
         geo: {
           map: 'china',
           roam: true,
           label: { show: false },
-          itemStyle: { areaColor: '#005577', borderColor: '#111' },
+          itemStyle: { areaColor: '#005577', borderColor: 'white' },
         },
         series: [
           {
@@ -144,7 +144,7 @@ onMounted(() => {
               { name: '石家庄', value: [114.5, 38.0, 60] },
             ],
             symbolSize: (val: number[]) => val[2] / 2,
-            itemStyle: { color: '#ffd700' },
+            itemStyle: { color: 'white' },
           },
         ],
       })

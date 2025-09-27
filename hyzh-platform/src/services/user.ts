@@ -1,25 +1,34 @@
-import axios from 'axios'
+import request from '../utils/request'
 
-const http = axios.create({
-  baseURL: 'https://api.huanyuzhihui.com',
-  timeout: 5000,
-})
-
-// 请求拦截器可添加 token
-http.interceptors.request.use((config) => {
-  // config.headers.Authorization = 'Bearer ' + token
-  return config
-})
-
-export default http
-export const login = (data: { username: string; password: string }) => {
-  return http.post('/auth/login', data)
+// 定义登录请求参数类型
+interface LoginParams {
+  phone: string;
+  password: string;
 }
 
+// 账号密码登录
+export const login = (data: LoginParams) => {
+  return request({
+    url: '/api/auth/login',
+    method: 'post',
+    data
+  })
+}
+
+// 发送验证码（暂时保留，但当前版本不需要）
 export const sendCode = (phone: string) => {
-  return http.post('/auth/send-code', { phone })
+  return request({
+    url: '/api/auth/send-code',
+    method: 'post',
+    data: { phone }
+  })
 }
 
+// 验证码登录（暂时保留，但当前版本不需要）
 export const loginWithCode = (data: { phone: string; code: string }) => {
-  return http.post('/auth/login-code', data)
+  return request({
+    url: '/api/auth/code',
+    method: 'post',
+    data
+  })
 }

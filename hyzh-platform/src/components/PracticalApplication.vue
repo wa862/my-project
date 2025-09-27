@@ -20,7 +20,6 @@
 </template>
 
 <script setup lang="ts">
-// 不需要导入箭头图标了
 </script>
 
 <style scoped>
@@ -53,7 +52,7 @@
 .dropdown-item-link {
   display: block;
   width: 100%;
-  padding: 10px 20px;
+  padding: 10px 15px;
   color: var(--el-text-color-regular);
   text-decoration: none;
   outline: none !important; /* 确保没有轮廓线 */
