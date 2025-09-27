@@ -8,11 +8,7 @@ const app = express();
 
 // ==================== 基础配置 ====================
 app.use(cors({
-  origin: 
-  // ['http://localhost:5174','http://localhost:5173','https://your-domain.com'
-  //   , 'http://localhost','https://localhost','https://www.gov.cn',
-  // ],  // 允许所有来源
-  '*',
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
@@ -43,6 +39,7 @@ const userStatsRouter = require('./routes/user-stats');
 const userRouter = require('./routes/user');
 const registerRouter = require('./routes/register');
 const aboutPageRouter = require('./routes/aboutPage');
+const authRouter = require('./routes/auth'); // 新增auth路由
 
 // 使用路由
 app.use('/api/regions', regionsRouter);
@@ -59,6 +56,8 @@ app.use('/api/user-stats', userStatsRouter);
 app.use('/api/users', userRouter);
 app.use('/api/register', registerRouter);
 app.use('/api/about-page', aboutPageRouter);
+app.use('/api/auth', authRouter); // 新增auth路由
+
 // ==================== 健康检查 ====================
 app.get('/api/health', (req, res) => {
   res.json({
@@ -95,6 +94,7 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`🚀 服务器运行在 http://localhost:${PORT}`);
   console.log(`🛠️ 环境: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔐 认证接口: http://localhost:${PORT}/api/auth/login`);
 });
 
 // 优雅关闭处理
@@ -102,7 +102,6 @@ process.on('SIGTERM', () => {
   console.log('🛑 收到 SIGTERM 信号，准备关闭服务器...');
   server.close(() => {
     console.log('🛑 服务器已关闭');
-    pool.end(); // 关闭数据库连接池
     process.exit(0);
   });
 });
