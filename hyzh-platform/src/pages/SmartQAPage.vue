@@ -6,6 +6,37 @@
       <p>获取关于乡村基础教育的专业解答</p>
     </div>
 
+    <!-- API配置区域 -->
+    <div class="api-config-section" v-if="!hasApiKey">
+      <el-card class="api-config-card">
+        <template #header>
+          <div class="card-header">
+            <span>智谱AI API配置</span>
+          </div>
+        </template>
+        <div class="api-config-content">
+          <p class="config-tips">
+            请先配置智谱AI的API Key以使用智能问答功能。您可以从
+            <a href="https://bigmodel.cn/usercenter/apikeys" target="_blank">智谱AI官网</a>
+            获取API Key。
+          </p>
+          <el-form ref="apiFormRef" :model="apiConfig" :rules="apiRules" inline>
+            <el-form-item label="API Key" prop="apiKey" class="api-key-input">
+              <el-input
+                v-model="apiConfig.apiKey"
+                placeholder="请输入您的智谱AI API Key"
+                show-password
+                maxlength="100"
+              />
+            </el-form-item>
+            <el-form-item>
+              <el-button type="primary" @click="saveApiKey">保存配置</el-button>
+            </el-form-item>
+          </el-form>
+        </div>
+      </el-card>
+    </div>
+
     <!-- 问答内容区域 -->
     <div class="qa-container">
       <!-- 左侧筛选栏 -->
@@ -81,12 +112,27 @@
             <div class="question-content">
               <p class="question-text">{{ question.question }}</p>
             </div>
-            <div v-if="question.answer" class="answer-section">
+            <div v-if="question.isProcessing" class="processing-section">
+              <el-row type="flex" justify="center" align="middle" style="height: 100px;">
+                <el-col :span="24" style="text-align: center;">
+                  <el-icon style="margin-right: 8px;">
+                    <Loading />
+                  </el-icon>
+                  <span>AI正在生成回答，请稍候...</span>
+                </el-col>
+              </el-row>
+            </div>
+            <div v-else-if="question.answer" class="answer-section">
               <div class="answer-label">智能回答：</div>
               <p class="answer-text">{{ question.answer }}</p>
             </div>
             <div v-else class="unanswered-section">
               <p class="unanswered-text">等待智能回答...</p>
+              <div class="get-answer-btn-wrapper" v-if="hasApiKey">
+                <el-button type="primary" size="small" @click="getAIAnswer(question)">
+                  获取AI回答
+                </el-button>
+              </div>
             </div>
             <div class="question-footer">
               <div class="question-info">
@@ -176,7 +222,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick } from 'vue'
 import { ElMessage, ElForm, ElFormItem, ElInput, ElSelect, ElOption, ElButton, ElDialog } from 'element-plus'
-import { Search, Star, StarFilled, ChatDotRound, Share, Plus } from '@element-plus/icons-vue'
+import {  Star, StarFilled, ChatDotRound, Share, Plus, Loading } from '@element-plus/icons-vue'
 
 // 定义问题接口
 interface Question {
@@ -190,12 +236,18 @@ interface Question {
   comments: number
   liked: boolean
   answer?: string
+  isProcessing?: boolean
 }
 
 // 定义分类接口
 interface Category {
   label: string
   value: string
+}
+
+// 定义API配置接口
+interface ApiConfig {
+  apiKey: string
 }
 
 // 问题分类
@@ -209,7 +261,7 @@ const categories: Category[] = [
 ]
 
 // 热门标签
-const tags = ['乡村振兴', '教育公平', '数字化转型', '师资力量', '留守儿童', '教学质量', '教育资源']
+const tags = ['乡村教师', '教育公平', '数字化转型', '师资力量', '留守儿童', '教学质量', '教育资源']
 
 // 模拟问题数据
 const questions = ref<Question[]>([
@@ -258,7 +310,7 @@ const questions = ref<Question[]>([
     likes: 42,
     comments: 15,
     liked: false,
-    answer: '近年来国家出台的乡村教育支持政策主要包括：1. 乡村教师支持计划（2021-2035年），提高乡村教师待遇，改善工作生活条件；2. 数字乡村战略，推动优质教育资源向乡村覆盖；3. 乡村振兴促进法，将教育作为乡村振兴的重要内容；4. 中央财政加大对乡村教育的转移支付力度；5. 实施"强师计划"，加强乡村教师队伍建设；6. 推进"互联网+教育"，促进城乡教育资源均衡配置。'
+    answer: '近年来国家出台的乡村教育支持政策主要包括：1. 乡村教师支持计划（2021-2035年），提高乡村教师待遇，改善工作生活条件；2. 数字乡村战略，推动优质教育资源向乡村覆盖；3. 乡村振兴促进法，将教育作为振兴乡村的重要内容；4. 中央财政加大乡村教育的转移支付力度；5. 实施"强师计划"，加强乡村教师队伍建设；6. 推进"互联网+教育"，促进城乡教育资源均衡配置。'
   },
   {
     id: 5,
@@ -284,7 +336,12 @@ const newQuestion = ref({
   question: '',
   type: ''
 })
+const apiConfig = ref<ApiConfig>({
+  apiKey: ''
+})
 const questionFormRef = ref<InstanceType<typeof ElForm>>()
+const apiFormRef = ref<InstanceType<typeof ElForm>>()
+const hasApiKey = ref(false)
 const questionRules = {
   title: [
     { required: true, message: '请输入问题标题', trigger: 'blur' },
@@ -299,6 +356,13 @@ const questionRules = {
   ]
 }
 
+// API配置表单验证规则
+const apiRules = {
+  apiKey: [
+    { required: true, message: '请输入API Key', trigger: 'blur' }
+  ]
+}
+
 // 过滤后的问题列表
 const filteredQuestions = computed(() => {
   return questions.value.filter(question => {
@@ -306,28 +370,43 @@ const filteredQuestions = computed(() => {
     const matchesSearch = searchKeyword.value === '' ||
       question.title.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
       question.question.toLowerCase().includes(searchKeyword.value.toLowerCase()) ||
-      (question.answer && question.answer.toLowerCase().includes(searchKeyword.value.toLowerCase()))
+      (question.answer && question.answer.toLowerCase().includes(searchKeyword.value.toLowerCase()));
 
     // 分类过滤
     const matchesCategory = selectedCategories.value.length === 0 ||
-      selectedCategories.value.includes(question.type)
+      selectedCategories.value.includes(question.type);
 
     // 状态过滤
     const matchesStatus = selectedStatus.value === 'all' ||
       (selectedStatus.value === 'answered' && question.answer) ||
-      (selectedStatus.value === 'unanswered' && !question.answer)
+      (selectedStatus.value === 'unanswered' && !question.answer);
 
     // 标签过滤 - 这里简化处理，实际项目中应该有标签字段
     const matchesTag = selectedTags.value.length === 0 ||
-      selectedTags.value.some(tag => 
+      selectedTags.value.some(tag =>
         question.title.includes(tag) ||
         question.question.includes(tag) ||
         (question.answer && question.answer.includes(tag))
-      )
+      );
 
-    return matchesSearch && matchesCategory && matchesStatus && matchesTag
-  })
-})
+    return matchesSearch && matchesCategory && matchesStatus && matchesTag;
+  });
+});
+
+// 保存API Key配置
+const saveApiKey = async () => {
+  if (!apiFormRef.value) return;
+
+  try {
+    await apiFormRef.value.validate();
+    // 保存API Key到本地存储
+    localStorage.setItem('smartQA_apiKey', apiConfig.value.apiKey);
+    hasApiKey.value = true;
+    ElMessage.success('API配置保存成功');
+  } catch (error) {
+    console.error('表单验证失败:', error);
+  }
+};
 
 // 切换标签选择
 const toggleTag = (tag: string) => {
@@ -374,6 +453,58 @@ const handleCloseAddQuestion = () => {
   }
 }
 
+// 调用智谱AI API获取答案
+const getAIAnswer = async (question: Question) => {
+  const apiKey = localStorage.getItem('smartQA_apiKey')
+  if (!apiKey) {
+    ElMessage.error('请先配置API Key')
+    return
+  }
+
+  // 设置问题为处理中状态
+  question.isProcessing = true
+
+  try {
+    // 调用智谱AI的API
+    const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'glm-4-flash', // 使用GLM-4-Flash模型
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个乡村基础教育专家，需要回答用户关于乡村教育的各种问题。请用简洁明了的语言回答问题，提供实用的建议和解决方案。'
+          },
+          {
+            role: 'user',
+            content: `问题标题：${question.title} 问题描述：${question.question}`
+          }
+        ],
+        temperature: 0.7,
+        max_tokens: 1000
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`API调用失败: ${response.status}`)
+    }
+
+    const data = await response.json()
+    // 设置AI回答
+    question.answer = data.choices?.[0]?.message?.content || '抱歉，未能生成回答'
+  } catch (error) {
+    console.error('获取AI回答失败:', error)
+    question.answer = '获取AI回答失败，请检查API Key是否正确或稍后再试'
+    ElMessage.error('获取AI回答失败')
+  } finally {
+    question.isProcessing = false
+  }
+}
+
 // 提交新问题
 const handleSubmitQuestion = async () => {
   if (!questionFormRef.value) return
@@ -396,14 +527,30 @@ const handleSubmitQuestion = async () => {
 
     questions.value.unshift(newQ)
 
+    // 如果已配置API Key，则自动获取AI回答
+    if (hasApiKey.value) {
+      await getAIAnswer(newQ)
+    }
+
     // 关闭弹窗
     handleCloseAddQuestion()
-
     ElMessage.success('问题提交成功')
   } catch (error) {
     console.error('表单验证失败:', error)
   }
 }
+
+// 初始化检查是否已保存API Key
+const initApiKey = () => {
+  const savedApiKey = localStorage.getItem('smartQA_apiKey')
+  if (savedApiKey) {
+    apiConfig.value.apiKey = savedApiKey
+    hasApiKey.value = true
+  }
+}
+
+// 组件挂载时初始化
+initApiKey()
 
 // 导出组件
 defineExpose({})
@@ -414,6 +561,37 @@ defineExpose({})
   min-height: 100vh;
   background-color: #f8f9fa;
   padding: 20px;
+}
+
+.api-config-section {
+  max-width: 1400px;
+  margin: 0 auto 30px;
+}
+
+.api-config-card {
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.api-config-content {
+  text-align: center;
+}
+
+.config-tips {
+  margin-bottom: 20px;
+  color: #666;
+}
+
+.api-key-input {
+  width: 400px;
+}
+
+@media (max-width: 768px) {
+  .api-key-input {
+    width: 100%;
+    margin-bottom: 10px;
+  }
 }
 
 .page-header {
@@ -613,11 +791,24 @@ defineExpose({})
   font-size: 15px;
 }
 
+.processing-section {
+  background: #e3f2fd;
+  padding: 16px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  color: #1976d2;
+}
+
 .unanswered-section {
   background: #fff3e0;
   padding: 16px;
   border-radius: 6px;
   margin-bottom: 15px;
+}
+
+.get-answer-btn-wrapper {
+  margin-top: 10px;
+  text-align: center;
 }
 
 .unanswered-text {
@@ -710,12 +901,12 @@ defineExpose({})
   .qa-container {
     grid-template-columns: 1fr;
   }
-  
+
   .filter-sidebar {
     position: static;
     margin-bottom: 20px;
   }
-  
+
   .tags {
     justify-content: center;
   }
@@ -725,18 +916,18 @@ defineExpose({})
   .page-header h1 {
     font-size: 28px;
   }
-  
+
   .question-header {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .question-footer {
     flex-direction: column;
     gap: 10px;
     align-items: flex-start;
   }
-  
+
   .search-section {
     flex-direction: column;
   }

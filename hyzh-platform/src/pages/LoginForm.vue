@@ -53,26 +53,24 @@
                 placeholder="请输入手机号"
                 size="large"
                 maxlength="11"
-                @input="handleCodePhoneInput"
+                @input="handlePhoneInput"
               />
             </el-form-item>
             <el-form-item label="验证码" prop="code">
               <div class="code-input-container">
                 <el-input
                   v-model="codeForm.code"
-                  placeholder="请输入验证码"
+                  placeholder="验证码"
                   size="large"
-                  maxlength="6"
-                  @input="handleCodeInput"
+                  style="flex: 1"
                 />
                 <el-button
-                  type="primary"
-                  size="large"
-                  :disabled="codeCountdown > 0 || !isValidPhone"
                   @click="handleSendCode"
-                  class="send-code-btn"
+                  :disabled="countdown > 0"
+                  size="large"
+                  style="margin-left: 10px"
                 >
-                  {{ codeCountdown > 0 ? `${codeCountdown}秒后重试` : '获取验证码' }}
+                  {{ countdown > 0 ? countdown + '秒后重试' : '发送验证码' }}
                 </el-button>
               </div>
             </el-form-item>
@@ -81,7 +79,7 @@
               @click="handleCodeLogin"
               size="large"
               style="width: 100%; margin-top: 10px"
-              :loading="codeLoading"
+              :loading="loading"
             >
               登录
             </el-button>
@@ -97,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance } from 'element-plus'
 import { login, sendCode, loginWithCode } from '../services/user'
@@ -105,10 +103,8 @@ import { login, sendCode, loginWithCode } from '../services/user'
 const router = useRouter()
 const activeTab = ref<'account' | 'code'>('account')
 const loading = ref(false)
-const codeLoading = ref(false)
 const accountFormRef = ref<FormInstance>()
 const codeFormRef = ref<FormInstance>()
-const codeCountdown = ref(0)
 
 // 表单数据
 const accountForm = reactive({
@@ -133,7 +129,7 @@ const accountRules = {
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
+    { min: 8, message: '密码长度至少8位', trigger: 'blur' }
   ]
 }
 
@@ -148,69 +144,17 @@ const codeRules = {
   ],
   code: [
     { required: true, message: '请输入验证码', trigger: 'blur' },
-    { len: 6, message: '验证码长度为6位', trigger: 'blur' }
+    { len: 6, message: '验证码必须为6位', trigger: 'blur' }
   ]
 }
 
-// 计算属性：检查手机号是否有效
-const isValidPhone = computed(() => {
-  return /^1[3-9]\d{9}$/.test(codeForm.phone)
-})
+const countdown = ref(0)
+let timer: number
 
 // 处理手机号输入
 const handlePhoneInput = () => {
   accountForm.phone = accountForm.phone.replace(/\D/g, '')
-}
-
-const handleCodePhoneInput = () => {
   codeForm.phone = codeForm.phone.replace(/\D/g, '')
-}
-
-// 处理验证码输入
-const handleCodeInput = () => {
-  codeForm.code = codeForm.code.replace(/\D/g, '')
-}
-
-// 发送验证码
-const handleSendCode = async () => {
-  if (!isValidPhone.value) {
-    ElMessage.warning('请输入有效的手机号')
-    return
-  }
-
-  try {
-    const response = await sendCode(codeForm.phone)
-
-    if (response.data.success) {
-      ElMessage.success('验证码发送成功')
-      // 开始倒计时
-      codeCountdown.value = 60
-      const timer = setInterval(() => {
-        codeCountdown.value--
-        if (codeCountdown.value <= 0) {
-          clearInterval(timer)
-        }
-      }, 1000)
-    } else {
-      ElMessage.error(response.data.message || '验证码发送失败')
-    }
-  } catch (error) {
-    console.error('发送验证码出错:', error)
-    ElMessage.error('验证码发送失败，请稍后重试')
-  }
-}
-
-// 定义错误类型
-interface ApiError {
-  code?: string;
-  response?: {
-    data: {
-      code: number;
-      message: string;
-      success: boolean;
-    };
-  };
-  message: string;
 }
 
 // 账号密码登录
@@ -218,54 +162,70 @@ const handleLogin = async () => {
   if (!accountFormRef.value) return
 
   try {
+    // 验证表单
     await accountFormRef.value.validate()
     loading.value = true
 
+    // 执行登录，使用手机号作为username
     const response = await login({
-      phone: accountForm.phone,
+      username: accountForm.phone,
       password: accountForm.password
     })
 
     if (response.data.success) {
       ElMessage.success('登录成功')
-      // 存储token和用户信息
-      localStorage.setItem('authToken', response.data.data.token)
-      localStorage.setItem('userInfo', JSON.stringify(response.data.data.user))
-
-      // 跳转到仪表盘
+      localStorage.setItem('authToken', response.data.token)
+      localStorage.setItem('userInfo', JSON.stringify(response.data.user))
       router.push('/dashboard')
     } else {
-      if (response.data.code === 404) {
-        ElMessage.warning('该手机号未注册，请先注册')
-      } else if (response.data.code === 401) {
-        ElMessage.error('密码错误')
-      } else {
-        ElMessage.error(response.data.message || '登录失败')
-      }
+      ElMessage.error(response.data.message || '登录失败')
     }
   } catch (error: unknown) {
     console.error('登录出错:', error)
-
-    // 类型安全的错误处理
-    const apiError = error as ApiError
-
-    if (apiError.response) {
-      // 服务器返回的错误
-      const { data } = apiError.response
-      if (data.code === 404) {
-        ElMessage.warning('该手机号未注册，请先注册')
-      } else if (data.code === 401) {
-        ElMessage.error('密码错误')
-      } else {
-        ElMessage.error(data.message || '登录失败')
+    if (error.response) {
+      // 根据响应状态判断具体错误类型
+      switch (error.response.status) {
+        case 404:
+          ElMessage.warning('该手机号未注册，请先注册')
+          break
+        case 401:
+          ElMessage.error('密码错误')
+          break
+        default:
+          ElMessage.error(error.response.data?.message || '登录失败')
       }
-    } else if (apiError.code === 'ERR_NETWORK') {
-      ElMessage.error('网络连接失败，请检查服务器状态')
     } else {
-      ElMessage.error('登录失败，请稍后重试')
+      ElMessage.error('网络错误，请检查连接')
     }
   } finally {
     loading.value = false
+  }
+}
+
+// 发送验证码
+const handleSendCode = async () => {
+  if (!codeFormRef.value) return
+
+  try {
+    // 验证手机号字段
+    await codeFormRef.value.validateField('phone')
+
+    // 发送验证码
+    const response = await sendCode(codeForm.phone)
+
+    if (response.data.success) {
+      ElMessage.success('验证码已发送')
+      startCountdown()
+    } else {
+      ElMessage.error(response.data.message || '验证码发送失败')
+    }
+  } catch (error: unknown) {
+    console.error('发送验证码出错:', error)
+    if (error.response && error.response.status === 404) {
+      ElMessage.warning('该手机号未注册，请先注册')
+    } else {
+      ElMessage.error(error.response?.data?.message || '验证码发送失败')
+    }
   }
 }
 
@@ -274,8 +234,9 @@ const handleCodeLogin = async () => {
   if (!codeFormRef.value) return
 
   try {
+    // 验证整个表单
     await codeFormRef.value.validate()
-    codeLoading.value = true
+    loading.value = true
 
     const response = await loginWithCode({
       phone: codeForm.phone,
@@ -284,49 +245,44 @@ const handleCodeLogin = async () => {
 
     if (response.data.success) {
       ElMessage.success('登录成功')
-      // 存储token和用户信息
-      localStorage.setItem('authToken', response.data.data.token)
-      localStorage.setItem('userInfo', JSON.stringify(response.data.data.user))
-
-      // 跳转到仪表盘
+      localStorage.setItem('authToken', response.data.token)
+      localStorage.setItem('userInfo', JSON.stringify(response.data.user))
       router.push('/dashboard')
     } else {
-      if (response.data.code === 404) {
-        ElMessage.warning('该手机号未注册，请先注册')
-      } else if (response.data.code === 401) {
-        ElMessage.error('验证码错误或已过期')
-      } else {
-        ElMessage.error(response.data.message || '登录失败')
-      }
+      ElMessage.error(response.data.message || '登录失败')
     }
   } catch (error: unknown) {
     console.error('验证码登录出错:', error)
-
-    // 类型安全的错误处理
-    const apiError = error as ApiError
-
-    if (apiError.response) {
-      // 服务器返回的错误
-      const { data } = apiError.response
-      if (data.code === 404) {
+    if (error.response) {
+      if (error.response.status === 404) {
         ElMessage.warning('该手机号未注册，请先注册')
-      } else if (data.code === 401) {
+      } else if (error.response.status === 400) {
         ElMessage.error('验证码错误或已过期')
       } else {
-        ElMessage.error(data.message || '登录失败')
+        ElMessage.error(error.response.data?.message || '验证码登录失败')
       }
-    } else if (apiError.code === 'ERR_NETWORK') {
-      ElMessage.error('网络连接失败，请检查服务器状态')
     } else {
-      ElMessage.error('登录失败，请稍后重试')
+      ElMessage.error('网络错误，请检查连接')
     }
   } finally {
-    codeLoading.value = false
+    loading.value = false
   }
+}
+
+// 开始倒计时
+const startCountdown = () => {
+  countdown.value = 60
+  timer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) {
+      clearInterval(timer)
+    }
+  }, 1000)
 }
 </script>
 
 <style scoped>
+/* 保持原有的样式不变 */
 .login-container {
   display: flex;
   justify-content: center;
@@ -360,12 +316,7 @@ const handleCodeLogin = async () => {
 
 .code-input-container {
   display: flex;
-  gap: 10px;
-}
-
-.send-code-btn {
-  min-width: 120px;
-  white-space: nowrap;
+  align-items: center;
 }
 
 .footer {
