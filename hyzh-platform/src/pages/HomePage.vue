@@ -21,7 +21,7 @@
             @click="handleCardClick(currentIndex + index, item.link)"
           >
             <div class="news-image-wrapper">
-              <img :src="item.image_url" class="news-image" />
+              <img :src="item.image_url" class="news-image" @error="handleImageError" />
             </div>
 
             <!-- 选中时显示底部高亮标题 -->
@@ -41,21 +41,21 @@
         <div v-else class="loading-text">加载中...</div>
       </section>
 
-      <!-- 成果展示部分 -->
-      <section class="results-section">
-        <div class="section-header">
-          <h2>RESULTS DISPLAY</h2>
-          <h3>成果展示</h3>
-        </div>
-
-        <div class="results-list" ref="resultsList">
-          <div class="result-item" v-for="(result, index) in displayedResults" :key="index">
-            <h4 class="result-title">{{ result.title }}</h4>
-            <p class="result-description">{{ result.description }}</p>
+        <!-- 左侧：成果展示 -->
+        <div class="results-container">
+          <div class="section-header">
+            <h2>RESULTS DISPLAY</h2>
+            <h3>成果展示</h3>
           </div>
-          <div class="loading-more" v-if="loading">加载更多内容...</div>
+
+          <div class="results-list" ref="resultsList">
+            <div class="result-item" v-for="(result, index) in displayedResults" :key="index">
+              <h4 class="result-title">{{ result.title }}</h4>
+              <p class="result-description">{{ result.description }}</p>
+            </div>
+            <div class="loading-more" v-if="loading">加载更多内容...</div>
+          </div>
         </div>
-      </section>
     </div>
   </div>
 </template>
@@ -63,6 +63,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import CarouselBanner from '@/components/CarouselBanner.vue'
+
 import axios from 'axios'
 
 interface NewsItem {
@@ -80,6 +81,9 @@ const currentIndex = ref(0)
 const pageSize = 4
 const selectedIndex = ref(0)
 
+// 使用参考信息中提供的图片URL
+const defaultImageUrl = 'https://sfile.chatglm.cn/chatglm4/89323d8d-937a-4272-bd87-a876af63196e.png'
+
 // 模拟新闻数据（如果API不可用）
 const mockNews: NewsItem[] = [
   {
@@ -87,7 +91,7 @@ const mockNews: NewsItem[] = [
     title: '京津冀数智评估平台正式上线',
     summary: '平台致力于推动区域数字化转型和智能化发展',
     published_date: '2024-01-15',
-    image_url: '/src/assets/images/news1.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/1'
   },
   {
@@ -95,7 +99,7 @@ const mockNews: NewsItem[] = [
     title: '数字经济发展论坛成功举办',
     summary: '专家学者共话数字经济未来发展趋势',
     published_date: '2024-01-10',
-    image_url: '/src/assets/images/news2.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/2'
   },
   {
@@ -103,7 +107,7 @@ const mockNews: NewsItem[] = [
     title: '人工智能技术应用研讨会',
     summary: '探讨AI技术在各个领域的创新应用',
     published_date: '2024-01-05',
-    image_url: '/src/assets/images/news3.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/3'
   },
   {
@@ -111,7 +115,7 @@ const mockNews: NewsItem[] = [
     title: '数字化转型白皮书发布',
     summary: '详细解读企业数字化转型路径',
     published_date: '2024-01-01',
-    image_url: '/src/assets/images/news4.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/4'
   },
   {
@@ -119,7 +123,7 @@ const mockNews: NewsItem[] = [
     title: '智慧城市建设新进展',
     summary: '多个城市推进智慧城市建设项目',
     published_date: '2023-12-28',
-    image_url: '/src/assets/images/news5.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/5'
   },
   {
@@ -127,7 +131,7 @@ const mockNews: NewsItem[] = [
     title: '数据安全法规更新',
     summary: '最新数据安全保护政策解读',
     published_date: '2023-12-25',
-    image_url: '/src/assets/images/news6.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/6'
   },
   {
@@ -135,7 +139,7 @@ const mockNews: NewsItem[] = [
     title: '云计算技术发展趋势',
     summary: '云计算领域最新技术动态分析',
     published_date: '2023-12-20',
-    image_url: '/src/assets/images/news7.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/7'
   },
   {
@@ -143,7 +147,7 @@ const mockNews: NewsItem[] = [
     title: '区块链应用案例分享',
     summary: '区块链技术在实体经济中的应用',
     published_date: '2023-12-15',
-    image_url: '/src/assets/images/news8.jpg',
+    image_url: defaultImageUrl,
     link: 'https://example.com/news/8'
   }
 ]
@@ -167,6 +171,12 @@ const formatDate = (date: string) => {
   }
 }
 
+// 处理图片加载错误
+const handleImageError = (e: Event) => {
+  const img = e.target as HTMLImageElement
+  img.src = defaultImageUrl
+}
+
 const fetchNews = async () => {
   try {
     const res = await axios.get('http://localhost:3000/api/news', {
@@ -174,7 +184,11 @@ const fetchNews = async () => {
       timeout: 5000
     })
     if (res.data.success) {
-      allNews.value = res.data.data.list
+      // 确保API返回的图片URL有效，如果无效则使用默认图片
+      allNews.value = res.data.data.list.map((item: NewsItem) => ({
+        ...item,
+        image_url: item.image_url || defaultImageUrl
+      }))
     } else {
       console.error('新闻数据加载失败', res.data.message)
       // 使用模拟数据作为备选
@@ -417,27 +431,38 @@ onUnmounted(() => {
   font-size: 16px;
 }
 
-/* 成果展示部分 */
-.results-section {
+/* 成果展示和智能问答部分 */
+.results-qa-section {
   margin-top: 80px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+.results-container {
   background: #fff;
   border-radius: 10px;
   padding: 25px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  height: fit-content;
+  max-height: 600px;
+  display: flex;
+  flex-direction: column;
 }
 
-.results-section .section-header {
-  margin-bottom: 30px;
+.results-container .section-header {
+  margin-bottom: 20px;
 }
 
-.results-section .section-header h2 {
+.results-container .section-header h2 {
   color: #003366;
   font-size: 18px;
   margin: 0 0 5px 0;
   font-weight: 600;
 }
 
-.results-section .section-header h3 {
+.results-container .section-header h3 {
   color: #666;
   font-size: 22px;
   margin: 0;
@@ -445,9 +470,31 @@ onUnmounted(() => {
 }
 
 .results-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+  display: flex;
+  flex-direction: column;
   gap: 20px;
+  max-height: 500px;
+}
+
+.results-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.results-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.results-list::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+.results-list::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 
 .result-item {
@@ -485,10 +532,20 @@ onUnmounted(() => {
   font-size: 14px;
 }
 
+.qa-container {
+  min-height: 400px;
+  height: 100%;
+}
+
 @media (max-width: 768px) {
   .news-container {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
+  }
+
+  .results-qa-section {
+    grid-template-columns: 1fr;
+    gap: 20px;
   }
 
   .results-list {

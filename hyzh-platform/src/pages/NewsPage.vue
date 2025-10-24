@@ -216,8 +216,8 @@ onUnmounted(() => {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60%;
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+  height: 70%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
 }
 
 .carousel-content {
@@ -226,7 +226,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   padding: 30px 40px;
-  color: white;
+  color: rgb(255, 255, 255);
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -260,16 +260,19 @@ onUnmounted(() => {
   -webkit-box-orient: vertical;
   overflow: hidden;
   max-width: 80%;
+  background: #78b6f4;
 }
 
 .view-btn {
-  background: rgba(255, 255, 255, 0.9);
-  color: #333;
+  background: #1282c8;
+  color: white;
   font-weight: 600;
+  border: none;
 }
 
 .view-btn:hover {
-  background: white;
+  background: #0f6aa5;
+  color: #0f6aa5;
 }
 
 /* 响应式调整 */

@@ -7,12 +7,12 @@
           <router-link to="/dashboard" class="dropdown-item-link">可视化平台</router-link>
         </el-dropdown-item>
         <el-dropdown-item>
-          <router-link to="/data-service/extension1" class="dropdown-item-link"
-            >评估可视化</router-link
+          <router-link to="/epu" class="dropdown-item-link"
+            >智能评估模型</router-link
           >
         </el-dropdown-item>
         <el-dropdown-item>
-          <router-link to="/data-service/extension2" class="dropdown-item-link"
+          <router-link to="/knowledgeable" class="dropdown-item-link"
             >时空知识图谱</router-link
           >
         </el-dropdown-item>

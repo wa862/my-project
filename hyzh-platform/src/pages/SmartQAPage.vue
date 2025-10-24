@@ -245,11 +245,6 @@ interface Category {
   value: string
 }
 
-// 定义API配置接口
-interface ApiConfig {
-  apiKey: string
-}
-
 // 问题分类
 const categories: Category[] = [
   { label: '教育政策', value: 'education-policy' },
@@ -336,12 +331,8 @@ const newQuestion = ref({
   question: '',
   type: ''
 })
-const apiConfig = ref<ApiConfig>({
-  apiKey: ''
-})
 const questionFormRef = ref<InstanceType<typeof ElForm>>()
-const apiFormRef = ref<InstanceType<typeof ElForm>>()
-const hasApiKey = ref(false)
+const hasApiKey = ref(true) // 始终为true，因为API Key已内置
 const questionRules = {
   title: [
     { required: true, message: '请输入问题标题', trigger: 'blur' },
@@ -353,13 +344,6 @@ const questionRules = {
   question: [
     { required: true, message: '请输入问题描述', trigger: 'blur' },
     { min: 10, max: 1000, message: '问题描述长度在 10 到 1000 个字符', trigger: 'blur' }
-  ]
-}
-
-// API配置表单验证规则
-const apiRules = {
-  apiKey: [
-    { required: true, message: '请输入API Key', trigger: 'blur' }
   ]
 }
 
@@ -392,21 +376,6 @@ const filteredQuestions = computed(() => {
     return matchesSearch && matchesCategory && matchesStatus && matchesTag;
   });
 });
-
-// 保存API Key配置
-const saveApiKey = async () => {
-  if (!apiFormRef.value) return;
-
-  try {
-    await apiFormRef.value.validate();
-    // 保存API Key到本地存储
-    localStorage.setItem('smartQA_apiKey', apiConfig.value.apiKey);
-    hasApiKey.value = true;
-    ElMessage.success('API配置保存成功');
-  } catch (error) {
-    console.error('表单验证失败:', error);
-  }
-};
 
 // 切换标签选择
 const toggleTag = (tag: string) => {
@@ -455,11 +424,8 @@ const handleCloseAddQuestion = () => {
 
 // 调用智谱AI API获取答案
 const getAIAnswer = async (question: Question) => {
-  const apiKey = localStorage.getItem('smartQA_apiKey')
-  if (!apiKey) {
-    ElMessage.error('请先配置API Key')
-    return
-  }
+  // 直接使用内置的API Key
+  const apiKey = '030afcb2f1a94e17bb3e2938459bf695.swY4d61X9Q9HeXA9'
 
   // 设置问题为处理中状态
   question.isProcessing = true
@@ -498,7 +464,7 @@ const getAIAnswer = async (question: Question) => {
     question.answer = data.choices?.[0]?.message?.content || '抱歉，未能生成回答'
   } catch (error) {
     console.error('获取AI回答失败:', error)
-    question.answer = '获取AI回答失败，请检查API Key是否正确或稍后再试'
+    question.answer = '获取AI回答失败，请稍后再试'
     ElMessage.error('获取AI回答失败')
   } finally {
     question.isProcessing = false
@@ -527,10 +493,8 @@ const handleSubmitQuestion = async () => {
 
     questions.value.unshift(newQ)
 
-    // 如果已配置API Key，则自动获取AI回答
-    if (hasApiKey.value) {
-      await getAIAnswer(newQ)
-    }
+    // 自动获取AI回答
+    await getAIAnswer(newQ)
 
     // 关闭弹窗
     handleCloseAddQuestion()
@@ -539,18 +503,6 @@ const handleSubmitQuestion = async () => {
     console.error('表单验证失败:', error)
   }
 }
-
-// 初始化检查是否已保存API Key
-const initApiKey = () => {
-  const savedApiKey = localStorage.getItem('smartQA_apiKey')
-  if (savedApiKey) {
-    apiConfig.value.apiKey = savedApiKey
-    hasApiKey.value = true
-  }
-}
-
-// 组件挂载时初始化
-initApiKey()
 
 // 导出组件
 defineExpose({})

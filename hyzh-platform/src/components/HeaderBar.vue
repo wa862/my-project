@@ -57,7 +57,11 @@ const isLoggedIn = computed(() => {
   return !!localStorage.getItem('authToken') && !!userInfo.value
 })
 
-
+// 用户头像
+const userAvatar = computed(() => {
+  // 如果有用户头像则使用用户头像，否则使用默认头像
+  return (userInfo.value as any)?.avatar || 'https://via.placeholder.com/36'
+})
 
 // 加载用户信息
 const loadUserInfo = () => {
@@ -119,10 +123,12 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 5%;
-  background-color: #f0f8ff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 15px 5%;
+  background-color: #2d9bdf !important;
+  background-image: none !important;
   z-index: 1000;
+  height: 70px;
+  box-shadow: none;
 }
 
 .logo-container {
@@ -143,7 +149,7 @@ onUnmounted(() => {
 .platform-name {
   font-size: 20px;
   font-weight: bold;
-  color: #1e5f8c;
+  color: white;
   white-space: nowrap;
 }
 
@@ -152,11 +158,12 @@ onUnmounted(() => {
   gap: 30px;
   margin-right: 30px;
   align-items: center;
+  background-color: transparent !important;
 }
 
 .nav-links a {
   text-decoration: none;
-  color: #2c3e50;
+  color: white;
   font-size: 17px;
   padding: 8px 0;
   position: relative;
@@ -164,13 +171,13 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.nav-links a:hover {
-  color: #1e88e5;
+/* .nav-links a:hover {
+  color: #e3f2fd;
   transform: translateY(-2px);
-}
+} */
 
 .nav-links a.router-link-active {
-  color: #1e88e5;
+  color: #e3f2fd;
   font-weight: bold;
 }
 
@@ -181,7 +188,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 3px;
-  background-color: #1e88e5;
+  background-color: #e3f2fd;
   border-radius: 2px;
 }
 
@@ -201,7 +208,7 @@ onUnmounted(() => {
 }
 
 .avatar-container:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
 .user-avatar {
@@ -214,12 +221,12 @@ onUnmounted(() => {
 }
 
 .dropdown-icon {
-  color: #666;
+  color: white;
   transition: transform 0.3s ease;
 }
 
 .user-profile:hover .dropdown-icon {
-  color: #1e88e5;
+  color: #e3f2fd;
 }
 
 .dropdown-menu {
